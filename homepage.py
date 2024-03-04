@@ -27,11 +27,11 @@ if st.session_state["progress_cnt"] == 0:
     st.write("Please annotate this feature using the sidebar on the left.")
 
 st.write(f'#### Top mean feature activation on token')
-txt = tokens_to_html_with_scores(data['top_mean_activations'], show_scores=False)
+txt = tokens_to_html_with_scores(data['top_mean_activations'], show_scores=True)
 st.write(txt, unsafe_allow_html=True)
 
 st.write(f'#### Top probablity diff for token prediction')
-txt = tokens_to_html_with_scores(data['top_logprob_diff'], show_scores=False)
+txt = tokens_to_html_with_scores(data['top_logprob_diff'], show_scores=True)
 st.write(txt, unsafe_allow_html=True)
 
 # st.write(f'#### Top negative probablity diff for predicting:')
@@ -48,8 +48,8 @@ st.write(txt, unsafe_allow_html=True)
 
 # Display first ten contexts from the dataset
 # st.write(f'#### Top feature activations with context')
+st.write(f'#### Contexts with top feature activations')
 for i, (tokens, activations) in enumerate(data['top_contexts']):
-    st.write(f'#### Context {i+1}')
     txt = tokens_to_html_with_highlighting(tokens, activations)
     st.write(txt, unsafe_allow_html=True)
     st.write("-----------------------------------------------------------")
