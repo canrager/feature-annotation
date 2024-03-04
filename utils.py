@@ -193,7 +193,7 @@ def tokens_to_html_with_scores(tokens_and_scores, show_scores=True):
     html = ""
     tokens, scores = [], []
     for token, score in tokens_and_scores:
-        if score > 1e-4:
+        if score > 0:
             tokens.append(token)
             scores.append(score)
 
