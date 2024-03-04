@@ -193,17 +193,19 @@ def tokens_to_html_with_scores(tokens_and_scores, show_scores=True):
     html = ""
     tokens, scores = [], []
     for token, score in tokens_and_scores:
-        if score > 0:
+        if float(score) > 1e-4:
             tokens.append(token)
             scores.append(score)
 
-    tokens = [tok[0] for tok in tokens_and_scores]
-    score_values = [tok[1] for tok in tokens_and_scores]
-
-    for i, token in enumerate(tokens):
+    # Normalize scores to [, 1]
+    scores_norm = np.array(scores)
+    scores_norm /= np.max(scores_norm)
+    for i, (token, score_norm) in enumerate(zip(tokens, scores_norm)):
         # Convert white background color to RGBA format
-        background_color = "white"
-        text_color = "black"
+        background_color = f"rgba(0, 0, 255, {score_norm})"
+        light_val = 230
+        dark_val = 40
+        text_color = f"rgba({dark_val}, {dark_val}, {dark_val})" if score_norm < 0.5 else f"rgba({light_val}, {light_val}, {light_val})"
         # replace any lewline character with ⏎
         for newline in newline_tokens:
             token = token.replace(newline, "⏎")
@@ -224,7 +226,7 @@ def tokens_to_html_with_scores(tokens_and_scores, show_scores=True):
 
         html += f'<span style="border: 1px solid #DDD; background-color: {background_color}; color: {text_color}; white-space: pre-wrap;">{token}</span>'
         if show_scores:
-            html += f" {float(score_values[i]):.2f}"
+            html += f" {scores[i]:.2f}"
         if i < len(tokens) - 1:
             html += ", "
     return html
