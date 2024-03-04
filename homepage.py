@@ -63,7 +63,10 @@ feature_summary = st.sidebar.text_input('Summarize the activated tokens in 1-5 w
 
 # Radio for rating interpretability
 radio_options = np.arange(1, 11)
-rating = st.sidebar.radio('Interpretability rating (1:bad to 10:excellent)', radio_options, 5)
+radio_options = [str(x) for x in radio_options]
+radio_options[0] = "1 (not interpretable)"
+radio_options[-1] = "10 (very interpretable)"
+rating = st.sidebar.radio('Interpretability rating', radio_options, 5)
 
 # Add button to submit
 if st.sidebar.button('Submit'):
