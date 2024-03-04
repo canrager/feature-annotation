@@ -1,0 +1,5 @@
+numpy
+matplotlib
+streamlit
+streamlit-shortcuts
+
