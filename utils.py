@@ -191,6 +191,12 @@ def tokens_to_html_with_scores(tokens_and_scores, show_scores=True):
     """
     newline_tokens = ['\n', '\r', '\r\n', '\v', '\f']
     html = ""
+    tokens, scores = [], []
+    for token, score in tokens_and_scores:
+        if score > 0:
+            tokens.append(token)
+            scores.append(score)
+
     tokens = [tok[0] for tok in tokens_and_scores]
     score_values = [tok[1] for tok in tokens_and_scores]
 
