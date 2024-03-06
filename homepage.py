@@ -135,7 +135,7 @@ for i, (tokens, activations) in enumerate(data['top_contexts']):
     if max(activations) > 1e-4: # Only show contexts with non-zero activations
         txt = tokens_to_html_with_highlighting(tokens, activations)
         st.write(txt, unsafe_allow_html=True)
-        st.write("-----------------------------------------------------------")
+        # st.write("-----------------------------------------------------------")
 
 
 
