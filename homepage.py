@@ -170,7 +170,7 @@ interp_input = interp_input.split(" ")[0]
 special_flag_input = st.checkbox('This feature is especially interesting.', key="special_flag_input")
 
 # Text input for notes
-notes_input = st.text_input('Further notes on the feature', key="notes_input")
+notes_input = st.text_input('(Optional) Further notes on the feature', key="notes_input")
 
 # Add button to submit
 def submit():
@@ -192,7 +192,7 @@ def submit():
 
     # Replace inputs with defaults
     st.session_state['label_input'] = ""
-    st.session_state['rating_input'] = radio_options[0]
+    st.session_state['rating_input'] = recall_options[0]
     st.session_state['notes_input'] = ""
     st.session_state['special_flag_input'] = False
 
