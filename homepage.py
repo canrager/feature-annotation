@@ -155,7 +155,7 @@ recall_options[0] = "Please select recall"
 recall_options[1] = "0 % (no true contexts match)"
 recall_options[-1] = "100 % (perfect recall)"
 recall_input = st.select_slider('Estimate the recall of your annotation:\nWhich fraction of all contexts the feature significantly activates on does your summary match?', options=recall_options, key="recall_input")
-recall_input = recall_input.split(" ")[0]
+recall_input = int(recall_input.split(" ")[0])
 
 # Slider for rating interpretability
 interp_options = np.arange(-1, 11)
@@ -164,7 +164,7 @@ interp_options[0] = "Please select rating"
 interp_options[1] = "0 (not interpretable)"
 interp_options[-1] = "10 (very interpretable)"
 interp_input = st.select_slider('Rate the interpretability of the feature:\nHow easy is it to understand what the feature is about?', options=interp_options, key="interp_input")
-interp_input = interp_input.split(" ")[0]
+interp_input = int(interp_input.split(" ")[0])
 
 # Expecially interesting
 special_flag_input = st.checkbox('This feature is especially interesting.', key="special_flag_input")
