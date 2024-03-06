@@ -63,7 +63,7 @@ with st.spinner("Loading feature annotator..."):
             new_input['user_id'] = user_id * len(new_input['user_label'])
 
             # Write to google sheets
-            df = pd.concat([df, ], ignore_index=True)
+            df = pd.concat([df, new_input], ignore_index=True)
             df = conn.update(
                 worksheet="annotations",
                 data=df,
