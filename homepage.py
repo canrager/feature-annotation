@@ -80,8 +80,8 @@ N_CONTEXTS_IN_EXPERIMENT = 256
 message = '''
 Welcome to the feature annotator!
 
-We trained dictionaries to map dense model internal activations to a sparse representation of 32k features. 
-Now, you can explore what the features correspond to! 
+We trained dictionaries to map dense internal activations of the `pythia-70m-deduped` model to a sparse representation of 32k features. 
+Now, you can explore the features! 
 We'll show you examples of input contexts and next-token-predictions where where a given feature activates.
 Please annotate this feature on the bottom of the page.
 
@@ -158,7 +158,7 @@ radio_options[0] = "Please select recall"
 radio_options[1] = "0 % (no true contexts match)"
 radio_options[-1] = "100 % (perfect recall)"
 # rating_input = st.radio('Estimate the recall of your annotation:\nWhich fraction of all contexts the feature fires on would your summary match?', radio_options, key="rating_input", index=0)
-rating_input = st.select_slider('Estimate the recall of your annotation:\nWhich fraction of all contexts the feature significantly activates on would your summary match?', options=radio_options, key="rating_input", value=radio_options[0])
+rating_input = st.select_slider('Estimate the recall of your annotation:\nWhich fraction of all contexts the feature significantly activates on would your summary match?', options=radio_options, key="rating_input")
 rating_input = rating_input.split(" ")[0]
 
 # Expecially interesting
