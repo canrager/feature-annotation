@@ -80,7 +80,7 @@ We'll show you examples of input contexts and next-token-predictions where where
 Please annotate this feature on the bottom of the page.
 
 We will explain the dictionary learining process in more detail in our forthcoming paper.
-Feel free to reach out to canrager@gmail.com if you have feedback or any questions right away.
+Feel free to reach out if you have feedback or any questions right away. See the footer for contact information.
 '''
 
 if st.session_state["progress_cnt"] == 0:
@@ -208,8 +208,6 @@ progress = st.progress(st.session_state["progress_cnt"] * (1/st.session_state['n
 # Footer message
 footer_message = f'''
 Your annotations will be lost if you close this tab before completing all {st.session_state['n_features']} features.
-Thanks for contributing :pray:
-
-Feel free to reach out to canrager@gmail.com.
+Thanks for contributing. :pray: Contact us at canrager@gmail.com.
 '''
 st.write(footer_message)
