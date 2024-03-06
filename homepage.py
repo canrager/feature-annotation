@@ -208,6 +208,8 @@ progress = st.progress(st.session_state["progress_cnt"] * (1/st.session_state['n
 # Footer message
 footer_message = f'''
 Your annotations will be lost if you close this tab before completing all {st.session_state['n_features']} features.
-Thanks for contributing. :pray: Contact us at canrager@gmail.com.
+Thanks for contributing :pray: 
+
+Contact us at canrager@gmail.com.
 '''
 st.write(footer_message)
