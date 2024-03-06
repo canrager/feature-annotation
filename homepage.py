@@ -22,7 +22,7 @@ st.set_page_config(layout="wide")
 
 with st.spinner("Loading feature annotator..."):
     # User inputs
-    COLUMNS = ["user_label", "user_rating", "user_special_flag", "user_notes", "feature_idx", "feature_submodule_type", "feature_layer_idx", "feature_training_run_name"]
+    COLUMNS = ["user_label", "user_recall", "user_interp_rating", "user_special_flag", "user_notes", "feature_idx", "feature_submodule_type", "feature_layer_idx", "feature_training_run_name"]
     st.session_state['inputs'] = st.session_state.get('inputs', defaultdict(list))
 
     # # User ID
@@ -148,15 +148,23 @@ st.header('Feature annotation')
 # Text input for feature label
 label_input = st.text_input('Concise feature annotation:\nSummarize what the feature is about in 1-5 words.', key="label_input")
 
-# Radio for rating interpretability
-radio_options = np.arange(-1, 21) * 5
-radio_options = [f'{x} %'  for x in radio_options]
-radio_options[0] = "Please select recall"
-radio_options[1] = "0 % (no true contexts match)"
-radio_options[-1] = "100 % (perfect recall)"
-# rating_input = st.radio('Estimate the recall of your annotation:\nWhich fraction of all contexts the feature fires on would your summary match?', radio_options, key="rating_input", index=0)
-rating_input = st.select_slider('Estimate the recall of your annotation:\nWhich fraction of all contexts the feature significantly activates on would your summary match?', options=radio_options, key="rating_input")
-rating_input = rating_input.split(" ")[0]
+# Slider for rating recall
+recall_options = np.arange(-1, 11) * 10
+recall_options = [f'{x} %'  for x in recall_options]
+recall_options[0] = "Please select recall"
+recall_options[1] = "0 % (no true contexts match)"
+recall_options[-1] = "100 % (perfect recall)"
+recall_input = st.select_slider('Estimate the recall of your annotation:\nWhich fraction of all contexts the feature significantly activates on does your summary match?', options=recall_options, key="recall_input")
+recall_input = recall_input.split(" ")[0]
+
+# Slider for rating interpretability
+interp_options = np.arange(-1, 11)
+interp_options = [f'{x}'  for x in interp_options]
+interp_options[0] = "Please select rating"
+interp_options[1] = "0 (not interpretable)"
+interp_options[-1] = "10 (very interpretable)"
+interp_input = st.select_slider('Rate the interpretability of the feature:\nHow easy is it to understand what the feature is about?', options=interp_options, key="interp_input")
+interp_input = interp_input.split(" ")[0]
 
 # Expecially interesting
 special_flag_input = st.checkbox('This feature is especially interesting.', key="special_flag_input")
@@ -170,7 +178,8 @@ def submit():
     st.session_state["progress_cnt"] += 1
     new_input = [
         label_input, 
-        rating_input, 
+        recall_input,
+        interp_input,
         special_flag_input,
         notes_input,
         feat["feature_idx"], 
