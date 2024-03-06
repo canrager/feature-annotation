@@ -20,21 +20,19 @@ st.set_page_config(layout="wide")
 
 with st.spinner("Loading feature annotator..."):
     # User inputs
-    COLUMNS = ["user_id", "user_label", "user_rating", "user_special_flag", "user_notes", "feature_idx", "feature_submodule_type", "feature_layer_idx", "feature_training_run_name"]
+    COLUMNS = ["user_label", "user_rating", "user_special_flag", "user_notes", "feature_idx", "feature_submodule_type", "feature_layer_idx", "feature_training_run_name"]
     st.session_state['inputs'] = st.session_state.get('inputs', defaultdict(list))
 
-    # User ID
-    if 'user_id' not in st.session_state:
-        conn = st.connection("gsheets", type=GSheetsConnection)
-        df = conn.read(
-            worksheet="annotations",
-            usecols=np.arange(len(COLUMNS)).tolist(),
-        ).dropna()
+    # # User ID
+    # if 'user_id' not in st.session_state:
+    #     conn = st.connection("gsheets", type=GSheetsConnection)
+    #     df = conn.read(
+    #         worksheet="annotations",
+    #         usecols=np.arange(len(COLUMNS)).tolist(),
+    #     ).dropna()
 
-        print(f'df shape: {df.shape}')
-
-        user_id = df['user_id'].iloc[-1] + 1
-        st.session_state['user_id'] = int(user_id)
+    #     user_id = df['user_id'].iloc[-1] + 1
+    #     st.session_state['user_id'] = int(user_id)
 
     # Progress bar
     st.session_state["progress_cnt"] = st.session_state.get("progress_cnt", 0)
@@ -58,8 +56,14 @@ with st.spinner("Loading feature annotator..."):
                 usecols=np.arange(len(COLUMNS)).tolist(),
                 # nrows=final_row_idx,
             ).dropna()
-            
-            df = pd.concat([df, pd.DataFrame(st.session_state['inputs'])], ignore_index=True)
+
+            # Assign user_id
+            user_id = df['user_id'].iloc[-1] + 1
+            new_input = st.session_state['inputs']
+            new_input['user_id'] = user_id * len(new_input['user_label'])
+
+            # Write to google sheets
+            df = pd.concat([df, ], ignore_index=True)
             df = conn.update(
                 worksheet="annotations",
                 data=df,
@@ -89,8 +93,6 @@ We will explain the dictionary learining process in more detail in our forthcomi
 Feel free to reach out to canrager@gmail.com if you have feedback or any questions right away.
 '''
 
-
-
 if st.session_state["progress_cnt"] == 0:
     st.info(message, icon="👋")
 
@@ -103,17 +105,23 @@ data = data[str(st.session_state["progress_cnt"])]
 feat = data['feature']
 st.header(f'Feature {feat["feature_idx"]} in {feat["submodule_type"]} layer {feat["layer_idx"]}')
 
-st.write(f'#### Top mean feature activation on token')
-st.write(f'Top 10 (or less) tokens ranked by feature activation.\
-         A deeply blue token indicates a high mean feature activation across {N_CONTEXTS_IN_EXPERIMENT} random contexts.\
-         We measure the feature activation at the sequence position of the token shown here.')
+
+
+info_mean_act = f'''
+Top 10 (or less) tokens ranked by feature activation.
+A deeply blue token indicates a high mean feature activation across {N_CONTEXTS_IN_EXPERIMENT} random contexts.
+We measure the feature activation at the sequence position of the token shown here.
+'''
+st.markdown(f'#### Top mean feature activation on token', help=info_mean_act)
 txt = tokens_to_html_with_scores(data['top_mean_activations'], show_scores=False)
 st.write(txt, unsafe_allow_html=True)
 
-st.write(f'#### Top probablity diff for token prediction')
-st.write(f'Top 10 (or less) tokens ranked by the difference in logprob for predicting this token. \
-        A deeply blue token indicates a high mean feature activation across {N_CONTEXTS_IN_EXPERIMENT} random contexts. \
-        We measure the feature activation at the sequence position *before* the predicted token.')
+info_logprob = f'''
+Top 10 (or less) tokens ranked by the logprob of the token prediction.
+A deeply blue token indicates a high mean feature activation across {N_CONTEXTS_IN_EXPERIMENT} random contexts.
+We measure the feature activation at the sequence position *before* the predicted token.
+'''
+st.markdown(f'#### Top probablity diff for token prediction', help=info_logprob)
 txt = tokens_to_html_with_scores(data['top_logprob_diff'], show_scores=False)
 st.write(txt, unsafe_allow_html=True)
 
@@ -148,8 +156,7 @@ st.header('Feature annotation')
 # st.expander("Feature annotation", expanded=True)
 
 # Text input for feature label
-label_default = ""
-label_input = st.text_input('Concise feature annotation:\nSummarize what the feature is about in 1-5 words.', key="label_input", value=label_default)
+label_input = st.text_input('Concise feature annotation:\nSummarize what the feature is about in 1-5 words.', key="label_input")
 
 # Radio for rating interpretability
 radio_options = np.arange(-1, 21) * 5
@@ -162,7 +169,7 @@ rating_input = st.select_slider('Estimate the recall of your annotation:\nWhich 
 rating_input = rating_input.split(" ")[0]
 
 # Expecially interesting
-special_flag_input = st.checkbox('This feature is especially interesting.', key="pecial_flag_input")
+special_flag_input = st.checkbox('This feature is especially interesting.', key="special_flag_input")
 
 # Text input for notes
 notes_input = st.text_input('Further notes on the feature', key="notes_input")
@@ -172,10 +179,9 @@ def submit():
     # Increment progress bar
     st.session_state["progress_cnt"] += 1
     new_input = [
-        st.session_state['user_id'], 
         label_input, 
-        special_flag_input,
         rating_input, 
+        special_flag_input,
         notes_input,
         feat["feature_idx"], 
         feat["submodule_type"], 
@@ -186,8 +192,10 @@ def submit():
         st.session_state['inputs'][col].append(new_input[i])
 
     # Replace inputs with defaults
-    st.session_state['label_input'] = label_default
+    st.session_state['label_input'] = ""
     st.session_state['rating_input'] = radio_options[0]
+    st.session_state['notes_input'] = ""
+    st.session_state['special_flag_input'] = False
 
 st.button('Submit', on_click=submit)
     
@@ -197,7 +205,9 @@ progress = st.progress(st.session_state["progress_cnt"] * (1/st.session_state['n
 
 # Footer message
 footer_message = f'''
-Your annotations will be lost if you close this tab before completing all {st.session_state['n_features']} features.\n
-Thanks for contributing :pray: We collected {st.session_state['user_id']} annotations so far.\n
+Your annotations will be lost if you close this tab before completing all {st.session_state['n_features']} features.
+Thanks for contributing :pray:
+
 Feel free to reach out to canrager@gmail.com.
 '''
+st.write(footer_message)
