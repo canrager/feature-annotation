@@ -192,7 +192,8 @@ def submit():
 
     # Replace inputs with defaults
     st.session_state['label_input'] = ""
-    st.session_state['rating_input'] = recall_options[0]
+    st.session_state['recall_input'] = recall_options[0]
+    st.session_state['interp_input'] = interp_options[0]
     st.session_state['notes_input'] = ""
     st.session_state['special_flag_input'] = False
 
