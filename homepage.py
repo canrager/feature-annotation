@@ -194,6 +194,10 @@ st.button('Submit', on_click=submit)
 # Progress bar
 st.text("")
 progress = st.progress(st.session_state["progress_cnt"] * (1/st.session_state['n_features']), "Annotation progress")
-st.write(f"Your annotations will be lost if you close this tab before completing all {st.session_state['n_features']} features.")
-st.write(f"Thanks for contributing annotation no. {st.session_state['user_id']}  :pray:")
-st.write("Feel free to reach out to canrager@gmail.com.")
+
+# Footer message
+footer_message = f'''
+Your annotations will be lost if you close this tab before completing all {st.session_state['n_features']} features.\n
+Thanks for contributing :pray: We collected {st.session_state['user_id']} annotations so far.\n
+Feel free to reach out to canrager@gmail.com.
+'''
