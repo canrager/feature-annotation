@@ -4,11 +4,13 @@ Streamlit page for feature annotation
 
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
+import streamlit.components.v1 as components
 from utils import tokens_to_html_with_highlighting, tokens_to_html_with_scores
 import json
 import numpy as np
 import pandas as pd
 from collections import defaultdict
+import time
 
 
 
@@ -49,24 +51,12 @@ with st.spinner("Loading feature annotator..."):
         print("All features annotated")
         # Save to google sheets
         with st.spinner("Saving annotations..."):
-            # Read annotations and append new row
-            conn = st.connection("gsheets", type=GSheetsConnection)
-            df = conn.read(
-                worksheet="annotations",
-                usecols=np.arange(len(COLUMNS)).tolist(),
-                # nrows=final_row_idx,
-            ).dropna()
-
-            # Assign user_id
-            user_id = df['user_id'].iloc[-1] + 1
-            new_input = st.session_state['inputs']
-            new_input['user_id'] = user_id * len(new_input['user_label'])
-
             # Write to google sheets
-            df = pd.concat([df, new_input], ignore_index=True)
-            df = conn.update(
-                worksheet="annotations",
-                data=df,
+            # Appending to google sheets is not supported by the library. Reading, appending and overwriting seems too risky for data loss.
+            conn = st.connection("gsheets", type=GSheetsConnection)
+            conn.create(
+                worksheet=str(time.time()),
+                data=pd.DataFrame(st.session_state['inputs'], columns=COLUMNS),
             )
             st.cache_data.clear()
         st.switch_page("pages/endpage.py")
@@ -196,6 +186,9 @@ def submit():
     st.session_state['rating_input'] = radio_options[0]
     st.session_state['notes_input'] = ""
     st.session_state['special_flag_input'] = False
+
+    # scroll to top of page
+    components.html("<script>window.parent.document.querySelector('section.main').scrollTo(0, 0);</script>", height=0)
 
 st.button('Submit', on_click=submit)
     
