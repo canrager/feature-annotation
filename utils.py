@@ -126,7 +126,7 @@ def tokens_to_html(tokens, max_len=150):
         return html
 
 
-def tokens_to_html_with_highlighting(tokens, opacity_values=None, contains_scores=False, max_len=150):
+def tokens_to_html_with_highlighting(tokens, opacity_values=None, contains_scores=False, max_len=150, act_norm=1.0):
     """
     Given a list of tokens (strings), returns html for displaying the tokenized text.
     No answer tokens.
@@ -142,9 +142,9 @@ def tokens_to_html_with_highlighting(tokens, opacity_values=None, contains_score
         score_values = [tok[1] for tok in tokens]
 
     if opacity_values is not None:
+        opacity_values = np.array(opacity_values)
         opacity_values = opacity_values[-max_len:]  # Ensure activation_values match the truncated tokens list
-        opacity_values -= np.min(opacity_values)  # Shift activation_values to start from 0
-        opacity_values /= np.max(opacity_values)  # Normalize activation_values to [0, 1]
+        opacity_values /= act_norm  # Normalize activation_values to [0, 1]
 
     for i, token in enumerate(tokens):
         # Convert white background color to RGBA format

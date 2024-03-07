@@ -129,11 +129,15 @@ st.write(txt, unsafe_allow_html=True)
 
 # Display first ten contexts from the dataset
 st.write(f'#### Contexts with top feature activations')
-for i, (tokens, activations) in enumerate(data['top_contexts']):
-    if max(activations) > 1e-4: # Only show contexts with non-zero activations
-        txt = tokens_to_html_with_highlighting(tokens, activations)
-        txt += "<hr/>"
-        st.write(txt, unsafe_allow_html=True)
+# find max activation across all contexts
+max_activations = [max(activations) for tokens, activations in data['top_contexts']]
+global_max_activation = max(max_activations) # across all contexts shown for this feature
+for ((tokens, activations), max_act) in zip(data['top_contexts'], max_activations):
+    if max_act < 1e-4: # Only show contexts with non-zero activations
+        continue
+    txt = tokens_to_html_with_highlighting(tokens, activations, act_norm=global_max_activation)
+    txt += "<hr/>" # Separator
+    st.write(txt, unsafe_allow_html=True)
 
 
 
@@ -149,13 +153,16 @@ st.header('Feature annotation')
 label_input = st.text_input('Concise feature annotation:\nSummarize what the feature is about in 1-5 words.', key="label_input")
 
 # Slider for rating recall
-recall_options = np.arange(-1, 11) * 10
-recall_options = [f'{x} %'  for x in recall_options]
-recall_options[0] = "Please select recall"
-recall_options[1] = "0 % (no true contexts match)"
-recall_options[-1] = "100 % (perfect recall)"
-recall_input = st.select_slider('Estimate the recall of your annotation:\nWhich fraction of all contexts the feature significantly activates on does your summary match?', options=recall_options, key="recall_input")
-recall_input = recall_input.split(" ")[0]
+# recall_options = np.arange(-1, 11) * 10
+# recall_options = [f'{x} %'  for x in recall_options]
+# recall_options[0] = "Please select recall"
+# recall_options[1] = "0 % (no true contexts match)"
+# recall_options[-1] = "100 % (perfect recall)"
+# recall_input = st.select_slider('Estimate the recall of your annotation:\nWhich fraction of all contexts the feature significantly activates on does your summary match?', options=recall_options, key="recall_input")
+# recall_input = recall_input.split(" ")[0]
+
+# Special feature flag
+special_flag_input = st.checkbox('This feature is especially interesting.', key="special_flag_input")
 
 # Slider for rating interpretability
 interp_options = np.arange(-1, 11)
@@ -163,11 +170,8 @@ interp_options = [f'{x}'  for x in interp_options]
 interp_options[0] = "Please select rating"
 interp_options[1] = "0 (not interpretable)"
 interp_options[-1] = "10 (very interpretable)"
-interp_input = st.select_slider('Rate the interpretability of the feature:\nHow easy is it to understand what the feature is about?', options=interp_options, key="interp_input")
+interp_input = st.radio('Rate the interpretability of the feature:\nHow easy is it to understand what the feature is about?', options=interp_options, key="interp_input")
 interp_input = interp_input.split(" ")[0]
-
-# Expecially interesting
-special_flag_input = st.checkbox('This feature is especially interesting.', key="special_flag_input")
 
 # Text input for notes
 notes_input = st.text_input('(Optional) Further notes on the feature', key="notes_input")
@@ -178,7 +182,7 @@ def submit():
     st.session_state["progress_cnt"] += 1
     new_input = [
         label_input, 
-        recall_input,
+        "input_field_removed", # recall_input removed
         interp_input,
         special_flag_input,
         notes_input,
@@ -192,7 +196,7 @@ def submit():
 
     # Replace inputs with defaults
     st.session_state['label_input'] = ""
-    st.session_state['recall_input'] = recall_options[0]
+    # st.session_state['recall_input'] = recall_options[0]
     st.session_state['interp_input'] = interp_options[0]
     st.session_state['notes_input'] = ""
     st.session_state['special_flag_input'] = False
