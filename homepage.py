@@ -18,11 +18,13 @@ import time
 # Initialize session
 ########################
 
+COLUMNS = ["user_label", "user_interp", "user_complexity", "user_notes", "feature_idx", "feature_submodule_type", "feature_layer_idx", "feature_training_run_name"]
+dataset_dir = "demo_contexts.json"
+
 st.set_page_config(layout="wide")
 
 with st.spinner("Loading feature annotator..."):
     # User inputs
-    COLUMNS = ["user_label", "user_recall", "user_interp_rating", "user_special_flag", "user_notes", "feature_idx", "feature_submodule_type", "feature_layer_idx", "feature_training_run_name"]
     st.session_state['inputs'] = st.session_state.get('inputs', defaultdict(list))
 
     # # User ID
@@ -39,11 +41,11 @@ with st.spinner("Loading feature annotator..."):
     # Progress bar
     st.session_state["progress_cnt"] = st.session_state.get("progress_cnt", 0)
 
-    # Total number of features
+    # Load data
     if 'n_features' not in st.session_state:
-        with open('feature_contexts.json') as f:
-            data = json.load(f)
-            n_features = len(data)
+        with open(dataset_dir) as f:
+            st.session_state['data'] = json.load(f)
+            n_features = len(st.session_state['data'])
             st.session_state['n_features'] = n_features
 
     # Close session if all features are annotated
@@ -86,34 +88,31 @@ Feel free to reach out to canrager@gmail.com if you have feedback or any questio
 if st.session_state["progress_cnt"] == 0:
     st.info(message, icon="👋")
 
-# Load data
-with open('feature_contexts.json') as f:
-    data = json.load(f)
 
 # Display data
-data = data[str(st.session_state["progress_cnt"])]
+data = st.session_state['data'][str(st.session_state["progress_cnt"])]
 feat = data['feature']
-st.header(f'Feature {feat["feature_idx"]} in {feat["submodule_type"]} layer {feat["layer_idx"]}')
-
-
-
-info_mean_act = f'''
-Top 10 (or less) tokens ranked by feature activation.
-A deeply blue token indicates a high mean feature activation across {N_CONTEXTS_IN_EXPERIMENT} random contexts.
-We measure the feature activation at the sequence position of the token shown here.
-'''
-st.markdown(f'#### Top mean feature activation on token', help=info_mean_act)
-txt = tokens_to_html_with_scores(data['top_mean_activations'], show_scores=False)
-st.write(txt, unsafe_allow_html=True)
+st.header(f'Component {feat["feature_idx"]} in {feat["submodule_type"]} layer {feat["layer_idx"]}')
 
 info_logprob = f'''
 Top 10 (or less) tokens ranked by the logprob of the token prediction.
-A deeply blue token indicates a high mean feature activation across {N_CONTEXTS_IN_EXPERIMENT} random contexts.
+Hover over a token (and wait ~3s) to see the score.
+A deeply blue token indicates a high logprob across {N_CONTEXTS_IN_EXPERIMENT} random contexts.
 We measure the feature activation at the sequence position *before* the predicted token.
 '''
-st.markdown(f'#### Top probablity diff for token prediction', help=info_logprob)
+st.markdown(f'#### Most promoted tokens', help=info_logprob)
 txt = tokens_to_html_with_scores(data['top_logprob_diff'], show_scores=False)
 st.write(txt, unsafe_allow_html=True)
+
+info_mean_act = f'''
+Top 10 (or less) tokens ranked by feature activation.
+Hover over a token (and wait ~3s) to see the score.
+A deeply blue token indicates a high mean feature activation across {N_CONTEXTS_IN_EXPERIMENT} random contexts.
+We measure the feature activation at the sequence position of the token shown here.
+'''
+st.markdown(f'#### Most activated tokens', help=info_mean_act)
+txt = tokens_to_html_with_scores(data['top_mean_activations'], show_scores=False)
+st.markdown(txt, unsafe_allow_html=True)
 
 # st.write(f'#### Top negative probablity diff for predicting:')
 # txt = tokens_to_html_with_scores(data['bottom_logprob_diff'], show_scores=False)
@@ -128,7 +127,12 @@ st.write(txt, unsafe_allow_html=True)
 # st.write(txt, unsafe_allow_html=True)
 
 # Display first ten contexts from the dataset
-st.write(f'#### Contexts with top feature activations')
+info_context = f'''
+Top 10 feature activations with contexts.
+Hover over a token (and wait ~3s) to see the score.
+A deeply blue token indicates a high activation of the token in this specific contextr.
+'''
+st.markdown(f'#### Contexts of most activated tokens', help=info_context)
 # find max activation across all contexts
 max_activations = [max(activations) for tokens, activations in data['top_contexts']]
 global_max_activation = max(max_activations) # across all contexts shown for this feature
@@ -137,7 +141,7 @@ for ((tokens, activations), max_act) in zip(data['top_contexts'], max_activation
         continue
     txt = tokens_to_html_with_highlighting(tokens, activations, act_norm=global_max_activation)
     txt += "<hr/>" # Separator
-    st.write(txt, unsafe_allow_html=True)
+    st.markdown(txt, unsafe_allow_html=True)
 
 
 
@@ -150,7 +154,30 @@ st.header('Feature annotation')
 # st.expander("Feature annotation", expanded=True)
 
 # Text input for feature label
-label_input = st.text_input('Concise feature annotation:\nSummarize what the feature is about in 1-5 words.', key="label_input")
+label_input = st.text_input('**Concise feature annotation:** Summarize what the feature is about in 1-5 words.', key="label_input")
+
+# Special feature flag
+# special_flag_input = st.checkbox('This feature is especially interesting.', key="special_flag_input")
+
+# Slider for rating interpretability
+interp_options = np.arange(-1, 21) * 5
+interp_options = [f'{x} %'  for x in interp_options]
+interp_options[0] = "Please select"
+interp_options[1] = "0 % (themes are conceptually disconnected)"
+interp_options[-1] = "100 % (single common theme across contexts)"
+interp_prompt = "**Interpretability score:** How coherent are the examples shown above? Does the feature consistently activate on (or promote) the same concept or rather various distinct concepts?"
+interp_input = st.select_slider(interp_prompt, options=interp_options, key="interp_input")
+interp_input = interp_input.split(" ")[0]
+
+# select_slider for rating semantic complexity
+complexity_options = np.arange(-1, 21) * 5
+complexity_options = [f'{x} %'  for x in complexity_options]
+complexity_options[0] = "Please select"
+complexity_options[1] = "0 % (always same token regardless of context)"
+complexity_options[-1] = "100 % (diverse tokens in broad context)"
+complexity_prompt = "**Semantic complexity score:** How broad is the concept the token fires on? Does the feature activate on (or promote) diverse tokens of a general theme or simply the same token all over again?"
+complexity_input = st.select_slider(complexity_prompt, options=complexity_options, key="complexity_input")
+complexity_input = complexity_input.split(" ")[0]
 
 # Slider for rating recall
 # recall_options = np.arange(-1, 11) * 10
@@ -161,18 +188,6 @@ label_input = st.text_input('Concise feature annotation:\nSummarize what the fea
 # recall_input = st.select_slider('Estimate the recall of your annotation:\nWhich fraction of all contexts the feature significantly activates on does your summary match?', options=recall_options, key="recall_input")
 # recall_input = recall_input.split(" ")[0]
 
-# Special feature flag
-special_flag_input = st.checkbox('This feature is especially interesting.', key="special_flag_input")
-
-# Slider for rating interpretability
-interp_options = np.arange(-1, 11)
-interp_options = [f'{x}'  for x in interp_options]
-interp_options[0] = "Please select rating"
-interp_options[1] = "0 (not interpretable)"
-interp_options[-1] = "10 (very interpretable)"
-interp_input = st.radio('Rate the interpretability of the feature:\nHow easy is it to understand what the feature is about?', options=interp_options, key="interp_input")
-interp_input = interp_input.split(" ")[0]
-
 # Text input for notes
 notes_input = st.text_input('(Optional) Further notes on the feature', key="notes_input")
 
@@ -182,9 +197,8 @@ def submit():
     st.session_state["progress_cnt"] += 1
     new_input = [
         label_input, 
-        "input_field_removed", # recall_input removed
         interp_input,
-        special_flag_input,
+        complexity_input,
         notes_input,
         feat["feature_idx"], 
         feat["submodule_type"], 
@@ -198,6 +212,7 @@ def submit():
     st.session_state['label_input'] = ""
     # st.session_state['recall_input'] = recall_options[0]
     st.session_state['interp_input'] = interp_options[0]
+    st.session_state['complexity_input'] = complexity_options[0]
     st.session_state['notes_input'] = ""
     st.session_state['special_flag_input'] = False
 
@@ -211,10 +226,9 @@ st.text("")
 progress = st.progress(st.session_state["progress_cnt"] * (1/st.session_state['n_features']), "Annotation progress")
 
 # Footer message
-footer_message = f'''
+st.write(f'''
 Your annotations will be lost if you close this tab before completing all {st.session_state['n_features']} features.
 Thanks for contributing :pray: 
 
 Contact us at canrager@gmail.com.
-'''
-st.write(footer_message)
+''')

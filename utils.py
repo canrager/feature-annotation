@@ -40,7 +40,7 @@ def tokens_to_html(tokens, max_len=150):
         return html
 
 
-def tokens_to_html_with_highlighting(tokens, opacity_values=None, contains_scores=False, max_len=150, act_norm=1.0):
+def tokens_to_html_with_highlighting(tokens, opacity_values, max_len=150, act_norm=1.0):
     """
     Given a list of tokens (strings), returns html for displaying the tokenized text.
     No answer tokens.
@@ -51,32 +51,25 @@ def tokens_to_html_with_highlighting(tokens, opacity_values=None, contains_score
     if len(tokens) > max_len:
         html += '<span>...</span>'
     tokens = tokens[-max_len:]
-    if contains_scores:
-        tokens = [tok[0] for tok in tokens]
-        score_values = [tok[1] for tok in tokens]
+    opacity_values = opacity_values[-max_len:]
 
-    if opacity_values is not None:
-        opacity_values = np.array(opacity_values)
-        opacity_values = opacity_values[-max_len:]  # Ensure activation_values match the truncated tokens list
-        opacity_values /= act_norm  # Normalize activation_values to [0, 1]
-
-    for i, token in enumerate(tokens):
+    for i, (token, opacity) in enumerate(zip(tokens, opacity_values)) if opacity_values is not None else tokens:
         # Convert white background color to RGBA format
         if opacity_values is None:
             background_color = "white"
             text_color = "black"
         else:
-            opacity = opacity_values[i]
-            background_color = f"rgba(0, 0, 255, {opacity})"
+            normed_opacity = opacity / act_norm
+            background_color = f"rgba(0, 0, 255, {normed_opacity})"
             light_val = 230
             dark_val = 40
-            text_color = f"rgba({dark_val}, {dark_val}, {dark_val})" if opacity < 0.5 else f"rgba({light_val}, {light_val}, {light_val})"
+            text_color = f"rgba({dark_val}, {dark_val}, {dark_val})" if normed_opacity < 0.5 else f"rgba({light_val}, {light_val}, {light_val})"
         txt += token
         if all([c in newline_tokens for c in token]):
             # replace all instances with ⏎
             token_rep = len(token) * "⏎"
             brs = "<br>" * len(token)
-            html += f'<span style="border: 1px solid #DDD; background-color: {background_color}; color: {text_color}; white-space: pre-wrap;">{token_rep}</span>{brs}'
+            html += f'<span style="border: 1px solid #DDD; background-color: {background_color}; color: {text_color}; title: {opacity}, white-space: pre-wrap;" title="{np.round(opacity, 3)}">{token_rep}</span>{brs}'
         else:
             # replace any $ with \$ to avoid markdown interpretation
             token = token.replace("$", "\$")
@@ -93,7 +86,7 @@ def tokens_to_html_with_highlighting(tokens, opacity_values=None, contains_score
             # there's also an issue with the backtick, so escape it
             token = token.replace("`", "\`")
 
-            html += f'<span style="border: 1px solid #DDD; background-color: {background_color}; color: {text_color}; white-space: pre-wrap;">{token}</span>'
+            html += f'<span style="border: 1px solid #DDD; background-color: {background_color}; color: {text_color}; white-space: pre-wrap;" title="{np.round(opacity, 3)}">{token}</span>'
     if "</" in txt:
         return "CONTEXT NOT LOADED FOR SECURITY REASONS SINCE IT CONTAINS HTML CODE (could contain javascript)."
     else:
@@ -112,14 +105,14 @@ def tokens_to_html_with_scores(tokens_and_scores, show_scores=True):
             scores.append(score)
 
     # Normalize scores to [, 1]
-    scores_norm = np.array(scores)
-    scores_norm /= np.max(scores_norm)
-    for i, (token, score_norm) in enumerate(zip(tokens, scores_norm)):
+    max_score = np.max(scores)
+    for i, (token, score) in enumerate(zip(tokens, scores)):
         # Convert white background color to RGBA format
-        background_color = f"rgba(0, 0, 255, {score_norm})"
+        normed_score = score / max_score
+        background_color = f"rgba(0, 0, 255, {normed_score})"
         light_val = 230
         dark_val = 40
-        text_color = f"rgba({dark_val}, {dark_val}, {dark_val})" if score_norm < 0.5 else f"rgba({light_val}, {light_val}, {light_val})"
+        text_color = f"rgba({dark_val}, {dark_val}, {dark_val})" if normed_score < 0.5 else f"rgba({light_val}, {light_val}, {light_val})"
         # replace any lewline character with ⏎
         for newline in newline_tokens:
             token = token.replace(newline, "⏎")
@@ -138,7 +131,7 @@ def tokens_to_html_with_scores(tokens_and_scores, show_scores=True):
         # there's also an issue with the backtick, so escape it
         token = token.replace("`", "\`")
 
-        html += f'<span style="border: 1px solid #DDD; background-color: {background_color}; color: {text_color}; white-space: pre-wrap;">{token}</span>'
+        html += f'<span style="border: 1px solid #DDD; background-color: {background_color}; color: {text_color}; white-space: pre-wrap;" title="{np.round(score, 3)}">{token}</span>'
         if show_scores:
             html += f" {scores[i]:.2f}"
         if i < len(tokens) - 1:
