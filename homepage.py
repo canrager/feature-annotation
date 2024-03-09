@@ -59,6 +59,7 @@ with st.spinner("Loading feature annotator..."):
                 data=pd.DataFrame(st.session_state['inputs'], columns=COLUMNS),
             )
             st.cache_data.clear()
+            st.session_state['inputs'] = defaultdict(list)
 
     # Close session if all features are annotated
     if st.session_state["progress_cnt"] == st.session_state["n_features"]:
