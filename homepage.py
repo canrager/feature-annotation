@@ -233,7 +233,7 @@ progress = st.progress(st.session_state["progress_cnt"] * (1/st.session_state['n
 
 # Footer message
 st.write(f'''
-Your annotations will be lost if you close this tab before completing all {st.session_state['n_features']} features.
+You will have to start over if you close this tab. We save your progress every 10 annotations.
 Thanks for contributing :pray: 
 
 Contact us at canrager@gmail.com.
