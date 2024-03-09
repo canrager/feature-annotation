@@ -18,8 +18,9 @@ import time
 # Initialize session
 ########################
 
-COLUMNS = ["user_label", "user_interp", "user_complexity", "user_notes", "feature_idx", "feature_submodule_type", "feature_layer_idx", "feature_training_run_name"]
-dataset_dir = "demo_contexts.json"
+N_CONTEXTS_IN_EXPERIMENT = 256
+COLUMNS = ["user_label", "user_interp", "user_complexity", "user_notes", "feature_set_name", "feature_idx", "feature_submodule_type", "feature_layer_idx", "feature_training_run_name"]
+dataset_dir = "sparse-dense_random-RC_contexts.json"
 
 st.set_page_config(layout="wide")
 
@@ -48,10 +49,7 @@ with st.spinner("Loading feature annotator..."):
             n_features = len(st.session_state['data'])
             st.session_state['n_features'] = n_features
 
-    # Close session if all features are annotated
-    if st.session_state["progress_cnt"] == st.session_state["n_features"]:
-        print("All features annotated")
-        # Save to google sheets
+    def save_to_gsheets():
         with st.spinner("Saving annotations..."):
             # Write to google sheets
             # Appending to google sheets is not supported by the library. Reading, appending and overwriting seems too risky for data loss.
@@ -61,7 +59,14 @@ with st.spinner("Loading feature annotator..."):
                 data=pd.DataFrame(st.session_state['inputs'], columns=COLUMNS),
             )
             st.cache_data.clear()
+
+    # Close session if all features are annotated
+    if st.session_state["progress_cnt"] == st.session_state["n_features"]:
+        save_to_gsheets()
         st.switch_page("pages/endpage.py")
+    elif st.session_state["progress_cnt"] % 10 == 0:
+        save_to_gsheets()
+
 
 
 
@@ -69,8 +74,6 @@ with st.spinner("Loading feature annotator..."):
 ########################
 # Main page
 ########################
-
-N_CONTEXTS_IN_EXPERIMENT = 256
 
 # Welcome message
 message = '''
@@ -92,7 +95,8 @@ if st.session_state["progress_cnt"] == 0:
 # Display data
 data = st.session_state['data'][str(st.session_state["progress_cnt"])]
 feat = data['feature']
-st.header(f'Component {feat["feature_idx"]} in {feat["submodule_type"]} layer {feat["layer_idx"]}')
+st.header(f'Component in {feat["submodule_type"]} layer {feat["layer_idx"]} (#{st.session_state["progress_cnt"]} of {st.session_state["n_features"]})')
+st.write(f'')
 
 info_logprob = f'''
 Top 10 (or less) tokens ranked by the logprob of the token prediction.
@@ -200,6 +204,7 @@ def submit():
         interp_input,
         complexity_input,
         notes_input,
+        feat["set_name"],
         feat["feature_idx"], 
         feat["submodule_type"], 
         feat["layer_idx"], 
