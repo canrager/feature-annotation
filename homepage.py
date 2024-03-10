@@ -1,11 +1,11 @@
 """
-Streamlit page for feature annotation
+Streamlit page for component annotation
 """
 
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import streamlit.components.v1 as components
-from utils import tokens_to_html_with_highlighting, tokens_to_html_with_scores
+from utils import tokens_to_html
 import json
 import numpy as np
 import pandas as pd
@@ -19,12 +19,12 @@ import time
 ########################
 
 N_CONTEXTS_IN_EXPERIMENT = 256
-COLUMNS = ["user_label", "user_interp", "user_complexity", "user_notes", "feature_set_name", "feature_idx", "feature_submodule_type", "feature_layer_idx", "feature_training_run_name"]
+COLUMNS = ["user_label", "user_interp", "user_complexity", "user_notes", "component_set_name", "component_idx", "component_submodule_type", "component_layer_idx", "component_training_run_name"]
 dataset_dir = "sparse-dense_random-RC_contexts.json"
 
 st.set_page_config(layout="wide")
 
-with st.spinner("Loading feature annotator..."):
+with st.spinner("Loading component annotator..."):
     # User inputs
     st.session_state['inputs'] = st.session_state.get('inputs', defaultdict(list))
 
@@ -43,11 +43,11 @@ with st.spinner("Loading feature annotator..."):
     st.session_state["progress_cnt"] = st.session_state.get("progress_cnt", 0)
 
     # Load data
-    if 'n_features' not in st.session_state:
+    if 'n_components' not in st.session_state:
         with open(dataset_dir) as f:
             st.session_state['data'] = json.load(f)
-            n_features = len(st.session_state['data'])
-            st.session_state['n_features'] = n_features
+            n_components = len(st.session_state['data'])
+            st.session_state['n_components'] = n_components
 
     def save_to_gsheets():
         with st.spinner("Saving annotations..."):
@@ -61,11 +61,11 @@ with st.spinner("Loading feature annotator..."):
             st.cache_data.clear()
             st.session_state['inputs'] = defaultdict(list)
 
-    # Close session if all features are annotated
-    if st.session_state["progress_cnt"] == st.session_state["n_features"]:
+    # Close session if all components are annotated
+    if st.session_state["progress_cnt"] == st.session_state["n_components"]:
         save_to_gsheets()
         st.switch_page("pages/endpage.py")
-    elif st.session_state["progress_cnt"] % 10 == 0:
+    elif st.session_state["progress_cnt"] % 10 == 0 and st.session_state["progress_cnt"] > 0:
         save_to_gsheets()
 
 
@@ -78,15 +78,11 @@ with st.spinner("Loading feature annotator..."):
 
 # Welcome message
 message = '''
-Welcome to the feature annotator!
+Welcome to the model component annotator!
 
-We trained dictionaries to map dense internal activations of the `pythia-70m-deduped` model to a sparse representation of 32k features. 
-Now, you can explore the features! 
-We'll show you examples of input contexts and next-token-predictions where where a given feature activates.
-Please annotate this feature on the bottom of the page.
-
-We will explain the dictionary learining process in more detail in our forthcoming paper.
-Feel free to reach out to canrager@gmail.com if you have feedback or any questions right away.
+We gathered information on components of a neural network and prepared it for you to explore. 
+Please help us by annotating how interpretable the components are. 
+Watch the walkthrough video for this annotation tool here: https://youtu.be/Opo41GkVEok
 '''
 
 if st.session_state["progress_cnt"] == 0:
@@ -95,56 +91,82 @@ if st.session_state["progress_cnt"] == 0:
 
 # Display data
 data = st.session_state['data'][str(st.session_state["progress_cnt"])]
-feat = data['feature']
-st.header(f'Component in {feat["submodule_type"]} layer {feat["layer_idx"]} (#{st.session_state["progress_cnt"]} of {st.session_state["n_features"]})')
+comp = data['component']
+st.header(f'Component #{st.session_state["progress_cnt"]}')
 st.write(f'')
 
-info_logprob = f'''
+info_pos_logprob = f'''
 Top 10 (or less) tokens ranked by the logprob of the token prediction.
 Hover over a token (and wait ~3s) to see the score.
-A deeply blue token indicates a high logprob across {N_CONTEXTS_IN_EXPERIMENT} random contexts.
-We measure the feature activation at the sequence position *before* the predicted token.
+A deeply blue token indicates a high mean logprob across {N_CONTEXTS_IN_EXPERIMENT} random contexts.
+We measure the component activation at the sequence position *before* the predicted token.
 '''
-st.markdown(f'#### Most promoted tokens', help=info_logprob)
-txt = tokens_to_html_with_scores(data['top_logprob_diff'], show_scores=False)
+st.markdown(f'##### Tokens most promoted by this component (mean)', help=info_pos_logprob)
+tokens, scores = zip(*data['top_logprob_diff'])
+txt = tokens_to_html(tokens, scores, comma_separate_tokens=True, render_newlines=False, score_threshold=1e-5)
 st.write(txt, unsafe_allow_html=True)
 
-info_mean_act = f'''
-Top 10 (or less) tokens ranked by feature activation.
+
+info_neg_logprob = f'''
+Bottom 10 (or less) tokens ranked by the logprob of the token prediction.
 Hover over a token (and wait ~3s) to see the score.
-A deeply blue token indicates a high mean feature activation across {N_CONTEXTS_IN_EXPERIMENT} random contexts.
-We measure the feature activation at the sequence position of the token shown here.
+A deeply blue token indicates a high mean logprob across {N_CONTEXTS_IN_EXPERIMENT} random contexts.
+We measure the component activation at the sequence position *before* the predicted token.
 '''
-st.markdown(f'#### Most activated tokens', help=info_mean_act)
-txt = tokens_to_html_with_scores(data['top_mean_activations'], show_scores=False)
+st.markdown(f'##### Tokens most suppressed by this component (mean)', help=info_neg_logprob)
+tokens, scores = zip(*data['bottom_logprob_diff'])
+txt = tokens_to_html(tokens, scores, comma_separate_tokens=True, render_newlines=False, score_threshold=1e-5)
+st.write(txt, unsafe_allow_html=True)
+
+info_top_mean_act = f'''
+Top 10 (or less) tokens ranked by component activation.
+Hover over a token (and wait ~3s) to see the score.
+A deeply blue token indicates a high mean component activation across {N_CONTEXTS_IN_EXPERIMENT} random contexts.
+We measure the component activation at the sequence position of the token shown here.
+'''
+st.markdown(f'##### Tokens which most stimulate this component (mean)', help=info_top_mean_act)
+tokens, scores = zip(*data['top_mean_activations'])
+txt = tokens_to_html(tokens, scores, comma_separate_tokens=True, render_newlines=False, score_threshold=1e-5)
 st.markdown(txt, unsafe_allow_html=True)
 
-# st.write(f'#### Top negative probablity diff for predicting:')
-# txt = tokens_to_html_with_scores(data['bottom_logprob_diff'], show_scores=False)
-# st.write(txt, unsafe_allow_html=True)
+# info_bottom_mean_act = f'''
+# Bottom 10 (or less) tokens ranked by component activation.
+# Hover over a token (and wait ~3s) to see the score.
+# A deeply blue token indicates a high mean component activation across {N_CONTEXTS_IN_EXPERIMENT} random contexts.
+# We measure the component activation at the sequence position of the token shown here.
+# '''
+# st.markdown(f'##### Tokens which most negatively stimulate this component (mean)', help=info_bottom_mean_act)
+# tokens, scores = zip(*data['bottom_mean_activations'])
+# txt = tokens_to_html(tokens, scores, comma_separate_tokens=True, render_newlines=False, score_threshold=1e-5)
+# if txt == "":
+#     st.markdown('*No tokens found which have a significantly negative stimuation effect on this component.*')
+# st.markdown(txt, unsafe_allow_html=True)
 
 # st.write(f'#### Top logit diff for predicting:')
-# txt = tokens_to_html_with_scores(data['top_logit_diff'], show_scores=False)
+# tokens, scores = zip(*data['top_logit_diff'])
+# txt = tokens_to_html(tokens, scores, comma_separate_tokens=True, render_newlines=False, score_threshold=1e-5)
 # st.write(txt, unsafe_allow_html=True)
 
 # st.write(f'#### Top negative logit diff for predicting:')
-# txt = tokens_to_html_with_scores(data['bottom_logit_diff'], show_scores=False)
+# tokens, scores = zip(*data['bottom_logit_diff'])
+# txt = tokens_to_html(tokens, scores, comma_separate_tokens=True, render_newlines=False, score_threshold=1e-5)
 # st.write(txt, unsafe_allow_html=True)
 
 # Display first ten contexts from the dataset
 info_context = f'''
-Top 10 feature activations with contexts.
+Top 10 component activations with contexts.
 Hover over a token (and wait ~3s) to see the score.
 A deeply blue token indicates a high activation of the token in this specific contextr.
 '''
-st.markdown(f'#### Contexts of most activated tokens', help=info_context)
+st.markdown(f'##### Full input paragraphs of tokens which most stimulate this component', help=info_context)
 # find max activation across all contexts
 max_activations = [max(activations) for tokens, activations in data['top_contexts']]
-global_max_activation = max(max_activations) # across all contexts shown for this feature
+global_max_activation = max(max_activations) # across all contexts shown for this component
 for ((tokens, activations), max_act) in zip(data['top_contexts'], max_activations):
+    activations = np.array(activations)
     if max_act < 1e-4: # Only show contexts with non-zero activations
         continue
-    txt = tokens_to_html_with_highlighting(tokens, activations, act_norm=global_max_activation)
+    txt = tokens_to_html(tokens, activations, score_norm=global_max_activation)
     txt += "<hr/>" # Separator
     st.markdown(txt, unsafe_allow_html=True)
 
@@ -155,14 +177,14 @@ for ((tokens, activations), max_act) in zip(data['top_contexts'], max_activation
 # User input
 #########################
         
-st.header('Feature annotation')
-# st.expander("Feature annotation", expanded=True)
+st.header('Component annotation')
+# st.expander("component annotation", expanded=True)
 
-# Text input for feature label
-label_input = st.text_input('**Concise feature annotation:** Summarize what the feature is about in 1-5 words.', key="label_input")
+# Text input for component label
+label_input = st.text_input('**Concise component annotation:** Summarize what the component is about in 1-5 words.', key="label_input")
 
-# Special feature flag
-# special_flag_input = st.checkbox('This feature is especially interesting.', key="special_flag_input")
+# Special component flag
+# special_flag_input = st.checkbox('This component is especially interesting.', key="special_flag_input")
 
 # Slider for rating interpretability
 interp_options = np.arange(-1, 21) * 5
@@ -170,7 +192,7 @@ interp_options = [f'{x} %'  for x in interp_options]
 interp_options[0] = "Please select"
 interp_options[1] = "0 % (themes are conceptually disconnected)"
 interp_options[-1] = "100 % (single common theme across contexts)"
-interp_prompt = "**Interpretability score:** How coherent are the examples shown above? Does the feature consistently activate on (or promote) the same concept or rather various distinct concepts?"
+interp_prompt = "**Interpretability score:** How coherent are the examples shown above? Does the component consistently activate on (or promote) the same concept or rather various distinct concepts?"
 interp_input = st.select_slider(interp_prompt, options=interp_options, key="interp_input")
 interp_input = interp_input.split(" ")[0]
 
@@ -180,7 +202,7 @@ complexity_options = [f'{x} %'  for x in complexity_options]
 complexity_options[0] = "Please select"
 complexity_options[1] = "0 % (always same token regardless of context)"
 complexity_options[-1] = "100 % (diverse tokens in broad context)"
-complexity_prompt = "**Semantic complexity score:** How broad is the concept the token fires on? Does the feature activate on (or promote) diverse tokens of a general theme or simply the same token all over again?"
+complexity_prompt = "**Semantic complexity score:** How broad is the concept the token fires on? Does the component activate on (or promote) diverse tokens of a general theme or simply the same token all over again?"
 complexity_input = st.select_slider(complexity_prompt, options=complexity_options, key="complexity_input")
 complexity_input = complexity_input.split(" ")[0]
 
@@ -190,11 +212,11 @@ complexity_input = complexity_input.split(" ")[0]
 # recall_options[0] = "Please select recall"
 # recall_options[1] = "0 % (no true contexts match)"
 # recall_options[-1] = "100 % (perfect recall)"
-# recall_input = st.select_slider('Estimate the recall of your annotation:\nWhich fraction of all contexts the feature significantly activates on does your summary match?', options=recall_options, key="recall_input")
+# recall_input = st.select_slider('Estimate the recall of your annotation:\nWhich fraction of all contexts the component significantly activates on does your summary match?', options=recall_options, key="recall_input")
 # recall_input = recall_input.split(" ")[0]
 
 # Text input for notes
-notes_input = st.text_input('(Optional) Further notes on the feature', key="notes_input")
+notes_input = st.text_input('(Optional) Further notes on the component', key="notes_input")
 
 # Add button to submit
 def submit():
@@ -205,11 +227,11 @@ def submit():
         interp_input,
         complexity_input,
         notes_input,
-        feat["set_name"],
-        feat["feature_idx"], 
-        feat["submodule_type"], 
-        feat["layer_idx"], 
-        feat["training_run_name"]
+        comp["set_name"],
+        comp["feature_idx"], 
+        comp["submodule_type"], 
+        comp["layer_idx"], 
+        comp["training_run_name"]
     ]
     for i, col in enumerate(COLUMNS):
         st.session_state['inputs'][col].append(new_input[i])
@@ -229,11 +251,11 @@ st.button('Submit', on_click=submit)
     
 # Progress bar
 st.text("")
-progress = st.progress(st.session_state["progress_cnt"] * (1/st.session_state['n_features']), "Annotation progress")
+progress = st.progress(st.session_state["progress_cnt"] * (1/st.session_state['n_components']), "Annotation progress")
 
 # Footer message
 st.write(f'''
-You will have to start over if you close this tab. We save your progress every 10 annotations.
+Closing this tab resets the annotation session. We save your progress every 10 annotations.
 Thanks for contributing :pray: 
 
 Contact us at canrager@gmail.com.
