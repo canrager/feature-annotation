@@ -84,7 +84,6 @@ We gathered information on components of a neural network and prepared it for yo
 Please help us by annotating how interpretable the components are. 
 Watch the walkthrough video for this annotation tool here: https://youtu.be/Opo41GkVEok
 '''
-
 if st.session_state["progress_cnt"] == 0:
     st.info(message, icon="👋")
 
@@ -96,7 +95,9 @@ st.header(f'Component #{st.session_state["progress_cnt"]+1}')
 st.write(f'')
 
 info_pos_logprob = f'''
-Top 10 (or less) tokens ranked by the logprob of the token prediction.
+Top 10 (or less) tokens ranked by the counterfactual log-prob difference of the predicted token.
+(The counterfactual log-prob difference is the difference between the log-prob in a clean fwd pass 
+and the log-prob of a fwd pass where we set the output of the given component to zero.)
 Hover over a token (and wait ~3s) to see the score.
 A deeply blue token indicates a high mean logprob across {N_CONTEXTS_IN_EXPERIMENT} random contexts.
 We measure the component activation at the sequence position *before* the predicted token.
