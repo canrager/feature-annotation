@@ -106,17 +106,16 @@ tokens, scores = zip(*data['top_logprob_diff'])
 txt = tokens_to_html(tokens, scores, comma_separate_tokens=True, render_newlines=False, score_threshold=1e-5)
 st.write(txt, unsafe_allow_html=True)
 
-
-info_neg_logprob = f'''
-Bottom 10 (or less) tokens ranked by the logprob of the token prediction.
-Hover over a token (and wait ~3s) to see the score.
-A deeply blue token indicates a high mean logprob across {N_CONTEXTS_IN_EXPERIMENT} random contexts.
-We measure the component activation at the sequence position *before* the predicted token.
-'''
-st.markdown(f'##### Tokens most suppressed by this component (mean)', help=info_neg_logprob)
-tokens, scores = zip(*data['bottom_logprob_diff'])
-txt = tokens_to_html(tokens, scores, comma_separate_tokens=True, render_newlines=False, score_threshold=1e-5)
-st.write(txt, unsafe_allow_html=True)
+# info_neg_logprob = f'''
+# Bottom 10 (or less) tokens ranked by the logprob of the token prediction.
+# Hover over a token (and wait ~3s) to see the score.
+# A deeply blue token indicates a high mean logprob across {N_CONTEXTS_IN_EXPERIMENT} random contexts.
+# We measure the component activation at the sequence position *before* the predicted token.
+# '''
+# st.markdown(f'##### Tokens most suppressed by this component (mean)', help=info_neg_logprob)
+# tokens, scores = zip(*data['bottom_logprob_diff'])
+# txt = tokens_to_html(tokens, scores, comma_separate_tokens=True, render_newlines=False, score_threshold=1e-5)
+# st.write(txt, unsafe_allow_html=True)
 
 info_top_mean_act = f'''
 Top 10 (or less) tokens ranked by component activation.
