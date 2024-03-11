@@ -100,7 +100,7 @@ Top 10 (or less) tokens ranked by the counterfactual log-prob difference of the 
 and the log-prob of a fwd pass where we set the output of the given component to zero.)
 Hover over a token (and wait ~3s) to see the score.
 A deeply blue token indicates a high mean logprob across {N_CONTEXTS_IN_EXPERIMENT} random contexts.
-We measure the component activation at the sequence position *before* the predicted token.
+We measure the counterfactual log-prob diff at the sequence position *before* the predicted token.
 '''
 st.markdown(f'##### Tokens most promoted by this component (mean)', help=info_pos_logprob)
 tokens, scores = zip(*data['top_logprob_diff'])
