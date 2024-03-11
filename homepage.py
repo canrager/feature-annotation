@@ -20,7 +20,7 @@ import time
 
 N_CONTEXTS_IN_EXPERIMENT = 256
 COLUMNS = ["user_label", "user_interp", "user_complexity", "user_notes", "component_set_name", "component_idx", "component_submodule_type", "component_layer_idx", "component_training_run_name"]
-dataset_dir = "demo_contexts.json" #"sparse-dense_random-RC_contexts.json"
+dataset_dir = "sparse-dense_random-RC_contexts.json"
 
 st.set_page_config(layout="wide")
 
@@ -92,7 +92,7 @@ if st.session_state["progress_cnt"] == 0:
 # Display data
 data = st.session_state['data'][str(st.session_state["progress_cnt"])]
 comp = data['component']
-st.header(f'Component #{st.session_state["progress_cnt"]}')
+st.header(f'Component #{st.session_state["progress_cnt"]+1}')
 st.write(f'')
 
 info_pos_logprob = f'''
