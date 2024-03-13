@@ -7,7 +7,6 @@ import streamlit.components.v1 as components
 from utils import tokens_to_html
 import json
 import numpy as np
-import pandas as pd
 from collections import defaultdict
 import time
 from google.cloud import firestore
@@ -18,7 +17,7 @@ from google.oauth2 import service_account
 ########################
 
 N_CONTEXTS_IN_EXPERIMENT = 256
-TOTAL_ANNOTATIONS_PAID = 1
+TOTAL_ANNOTATIONS_PAID = 310
 dataset_dir = "sparse-dense_random-RC_contexts.json"
 
 st.set_page_config(layout="wide")
@@ -73,7 +72,7 @@ Welcome to the model component annotator!
 
 We gathered information on components of a neural network and prepared it for you to explore. 
 Please help us by annotating how interpretable the components are. 
-Watch the walkthrough video for this annotation tool here: https://youtu.be/Opo41GkVEok
+Watch the walkthrough video for this annotation tool here: https://youtu.be/RioPfQyZqBI
 '''
 if st.session_state["progress_cnt"] == 0:
     st.info(message, icon="👋")
