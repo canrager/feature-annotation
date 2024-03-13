@@ -18,7 +18,7 @@ from google.oauth2 import service_account
 ########################
 
 N_CONTEXTS_IN_EXPERIMENT = 256
-TOTAL_ANNOTATIONS_PAID = 500
+TOTAL_ANNOTATIONS_PAID = 1
 dataset_dir = "sparse-dense_random-RC_contexts.json"
 
 st.set_page_config(layout="wide")
@@ -83,6 +83,10 @@ if st.session_state["progress_cnt"] == 0:
 data = st.session_state['data'][str(st.session_state["sample_id"])]
 comp = data['component']
 st.header(f'Component #{st.session_state["sample_id"]}')
+if st.session_state["paid_mode"]:
+    st.write(f'We will reimburse you for your time.')
+else:
+    st.write(f'You are annotating voluntarily. We appreciate your help!')
 st.write(f'')
 
 info_pos_logprob = f'''
