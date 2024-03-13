@@ -86,7 +86,7 @@ st.header(f'Component #{st.session_state["sample_id"]}')
 if st.session_state["paid_mode"]:
     st.write(f'We will reimburse you for your time 30$/hr (please track approximately how long you spend on this). We appreciate your help!')
 else:
-    st.write(f'You are annotating without reimbursement. We appreciate your help!')
+    st.write(f'You are annotating voluntarily. We appreciate your help!')
 st.write(f'')
 
 info_pos_logprob = f'''
