@@ -29,6 +29,7 @@ with st.spinner("Loading component annotator..."):
     db = firestore.Client(credentials=creds, project="feature-annotation")
 
     # Find a random component with the least annotations
+    st.session_state["user_name"] = st.session_state.get("user_name", "")
     st.session_state["progress_cnt"] = st.session_state.get("progress_cnt", 0)
     st.session_state["total_annotations"] = st.session_state.get("total_annotations", 0)
     st.session_state["sample_id"] = st.session_state.get("sample_id", None)
@@ -83,7 +84,7 @@ data = st.session_state['data'][str(st.session_state["sample_id"])]
 comp = data['component']
 st.header(f'Component #{st.session_state["sample_id"]}')
 if st.session_state["paid_mode"]:
-    st.write(f'We will reimburse you for your time 30$/hr (please track approximately how long you spend on this). We appreciate your help!')
+    st.write(f'We will reimburse you for your time 20$/hr (please track approximately how long you spend on this). We appreciate your help!')
 else:
     st.write(f'You are annotating voluntarily. We appreciate your help!')
 st.write(f'')
@@ -213,7 +214,10 @@ complexity_input = complexity_input.split(" ")[0]
 notes_input = st.text_input('(Optional) Further notes on the component', key="notes_input")
 
 # Optional: Your user name
-username_input = st.text_input('(Optional) Your user name', key="username_input")
+if st.session_state["user_name"] == "":
+    st.session_state["user_name"] = st.text_input('(Required) Your user name', key="username_input")
+else:
+    st.write(f'Your user name: {st.session_state["user_name"]}')
 
 # Add button to submit
 def submit():
@@ -234,7 +238,8 @@ def submit():
         user_interp=interp_input,
         user_complexity=complexity_input,
         user_notes=notes_input,
-        user_name=username_input,
+        user_name=st.session_state["user_name"],
+        user_timestamp=time.time(),
     )
     annotation_doc_ref = db.collection("annotations").document(annotation_title)
     annotation_doc_ref.set(annotation_input)
@@ -245,20 +250,22 @@ def submit():
     stat["annotation_count"] += 1
     stat_ref.set(stat)
 
-    # Replace input fields with default values
-    st.session_state['label_input'] = ""
+    # Refresh session state
     # st.session_state['recall_input'] = recall_options[0]
+    st.session_state['label_input'] = ""
     st.session_state['interp_input'] = interp_options[0]
     st.session_state['complexity_input'] = complexity_options[0]
     st.session_state['notes_input'] = ""
     st.session_state['special_flag_input'] = False
-
     st.session_state['sample_id'] = None
 
     # scroll to top of page
     components.html("<script>window.parent.document.querySelector('section.main').scrollTo(0, 0);</script>", height=0)
 
-st.button('Submit', on_click=submit)
+if  st.session_state["user_name"] == "":
+    st.write("Please enter your user name to submit.")
+else:
+    st.button('Submit', on_click=submit)
     
 
 # Footer
