@@ -3,7 +3,6 @@ Streamlit page for component annotation
 """
 
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
 import streamlit.components.v1 as components
 from utils import tokens_to_html
 import json
@@ -11,36 +10,42 @@ import numpy as np
 import pandas as pd
 from collections import defaultdict
 import time
-
-
+from google.cloud import firestore
+from google.oauth2 import service_account
 
 ########################
 # Initialize session
 ########################
 
 N_CONTEXTS_IN_EXPERIMENT = 256
-COLUMNS = ["user_label", "user_interp", "user_complexity", "user_notes", "component_set_name", "component_idx", "component_submodule_type", "component_layer_idx", "component_training_run_name"]
+TOTAL_ANNOTATIONS_PAID = 500
 dataset_dir = "sparse-dense_random-RC_contexts.json"
 
 st.set_page_config(layout="wide")
-
 with st.spinner("Loading component annotator..."):
-    # User inputs
-    st.session_state['inputs'] = st.session_state.get('inputs', defaultdict(list))
 
-    # # User ID
-    # if 'user_id' not in st.session_state:
-    #     conn = st.connection("gsheets", type=GSheetsConnection)
-    #     df = conn.read(
-    #         worksheet="annotations",
-    #         usecols=np.arange(len(COLUMNS)).tolist(),
-    #     ).dropna()
+    # Connection to firebase
+    fb_credentials = st.secrets["firebase"]
+    creds = service_account.Credentials.from_service_account_info(fb_credentials)
+    db = firestore.Client(credentials=creds, project="feature-annotation")
 
-    #     user_id = df['user_id'].iloc[-1] + 1
-    #     st.session_state['user_id'] = int(user_id)
-
-    # Progress bar
+    # Find a random component with the least annotations
     st.session_state["progress_cnt"] = st.session_state.get("progress_cnt", 0)
+    st.session_state["total_annotations"] = st.session_state.get("total_annotations", 0)
+    st.session_state["sample_id"] = st.session_state.get("sample_id", None)
+
+    if st.session_state["sample_id"] is None:
+        stats = db.collection("stats").stream()
+        cnt_dict = defaultdict(list)
+        st.session_state["total_annotations"] = 0
+        for stat in stats:
+            cnt = stat.to_dict()["annotation_count"]
+            st.session_state["total_annotations"] += cnt
+            cnt_dict[cnt].append(stat.id)
+        print(list(cnt_dict.keys()))
+        least_annotated = min(cnt_dict.keys())
+        sample_id = np.random.choice(cnt_dict[least_annotated])
+        st.session_state['sample_id'] = sample_id
 
     # Load data
     if 'n_components' not in st.session_state:
@@ -48,25 +53,11 @@ with st.spinner("Loading component annotator..."):
             st.session_state['data'] = json.load(f)
             n_components = len(st.session_state['data'])
             st.session_state['n_components'] = n_components
-
-    def save_to_gsheets():
-        with st.spinner("Saving annotations..."):
-            # Write to google sheets
-            # Appending to google sheets is not supported by the library. Reading, appending and overwriting seems too risky for data loss.
-            conn = st.connection("gsheets", type=GSheetsConnection)
-            conn.create(
-                worksheet=str(time.time()),
-                data=pd.DataFrame(st.session_state['inputs'], columns=COLUMNS),
-            )
-            st.cache_data.clear()
-            st.session_state['inputs'] = defaultdict(list)
-
+            
     # Close session if all components are annotated
-    if st.session_state["progress_cnt"] == st.session_state["n_components"]:
-        save_to_gsheets()
+    st.session_state["paid_mode"] = st.session_state.get("paid_mode", True)
+    if st.session_state["paid_mode"] and st.session_state["total_annotations"] >= TOTAL_ANNOTATIONS_PAID:
         st.switch_page("pages/endpage.py")
-    elif st.session_state["progress_cnt"] % 10 == 0 and st.session_state["progress_cnt"] > 0:
-        save_to_gsheets()
 
 
 
@@ -89,9 +80,9 @@ if st.session_state["progress_cnt"] == 0:
 
 
 # Display data
-data = st.session_state['data'][str(st.session_state["progress_cnt"])]
+data = st.session_state['data'][str(st.session_state["sample_id"])]
 comp = data['component']
-st.header(f'Component #{st.session_state["progress_cnt"]+1}')
+st.header(f'Component #{st.session_state["sample_id"]}')
 st.write(f'')
 
 info_pos_logprob = f'''
@@ -215,28 +206,43 @@ complexity_input = complexity_input.split(" ")[0]
 # recall_input = st.select_slider('Estimate the recall of your annotation:\nWhich fraction of all contexts the component significantly activates on does your summary match?', options=recall_options, key="recall_input")
 # recall_input = recall_input.split(" ")[0]
 
-# Text input for notes
+# Optional: Text input for notes
 notes_input = st.text_input('(Optional) Further notes on the component', key="notes_input")
+
+# Optional: Your user name
+username_input = st.text_input('(Optional) Your user name', key="username_input")
 
 # Add button to submit
 def submit():
     # Increment progress bar
     st.session_state["progress_cnt"] += 1
-    new_input = [
-        label_input, 
-        interp_input,
-        complexity_input,
-        notes_input,
-        comp["set_name"],
-        comp["feature_idx"], 
-        comp["submodule_type"], 
-        comp["layer_idx"], 
-        comp["training_run_name"]
-    ]
-    for i, col in enumerate(COLUMNS):
-        st.session_state['inputs'][col].append(new_input[i])
 
-    # Replace inputs with defaults
+    # Save inputs to firebase
+    annotation_title = "no" + str(st.session_state["total_annotations"]) + f"_at{time.time()}"
+
+    annotation_input = dict(
+        sample_id=st.session_state["sample_id"],
+        component_set_name=comp["set_name"],
+        component_idx=comp["feature_idx"],
+        component_submodule_type=comp["submodule_type"],
+        component_layer_idx=comp["layer_idx"],
+        component_training_run_name=comp["training_run_name"],
+        user_label=label_input,
+        user_interp=interp_input,
+        user_complexity=complexity_input,
+        user_notes=notes_input,
+        user_name=username_input,
+    )
+    annotation_doc_ref = db.collection("annotations").document(annotation_title)
+    annotation_doc_ref.set(annotation_input)
+
+    # Update annotation count in stats
+    stat_ref = db.collection("stats").document(str(st.session_state["sample_id"]))
+    stat = stat_ref.get().to_dict()
+    stat["annotation_count"] += 1
+    stat_ref.set(stat)
+
+    # Replace input fields with default values
     st.session_state['label_input'] = ""
     # st.session_state['recall_input'] = recall_options[0]
     st.session_state['interp_input'] = interp_options[0]
@@ -244,18 +250,20 @@ def submit():
     st.session_state['notes_input'] = ""
     st.session_state['special_flag_input'] = False
 
+    st.session_state['sample_id'] = None
+
     # scroll to top of page
     components.html("<script>window.parent.document.querySelector('section.main').scrollTo(0, 0);</script>", height=0)
 
 st.button('Submit', on_click=submit)
     
-# Progress bar
-st.text("")
-progress = st.progress(st.session_state["progress_cnt"] * (1/st.session_state['n_components']), "Annotation progress")
 
-# Footer message
+# Footer
+st.text("")
+annotations_left = TOTAL_ANNOTATIONS_PAID - st.session_state["total_annotations"]
 st.write(f'''
-Closing this tab resets the annotation session. We save your progress every 10 annotations.
+You annotated {st.session_state["progress_cnt"]} components in this session. 
+We need {annotations_left} more paid annotations to reach our goal.
 Thanks for contributing :pray: 
 
 Contact us at canrager@gmail.com.

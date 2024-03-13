@@ -1,3 +1,5 @@
 .python-version
 .__pycache__/*
 .streamlit/secrets.toml
+firestore-key.json
+sparse_rc_reduce_10_32768_contexts.json

@@ -4,3 +4,4 @@ streamlit
 streamlit-shortcuts
 st-gsheets-connection
 validators==0.22.0
+google-cloud-firestore
