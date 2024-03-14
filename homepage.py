@@ -17,7 +17,7 @@ from google.oauth2 import service_account
 ########################
 
 N_CONTEXTS_IN_EXPERIMENT = 256
-TOTAL_ANNOTATIONS_PAID = 310
+TOTAL_ANNOTATIONS_PAID = 210
 dataset_dir = "sparse-dense_random-RC_contexts.json"
 
 st.set_page_config(layout="wide")
