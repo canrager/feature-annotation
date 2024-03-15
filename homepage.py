@@ -264,6 +264,12 @@ def submit():
 
 if  st.session_state["user_name"] == "":
     st.write("Please enter your user name to submit.")
+elif label_input == "":
+    st.write("Please enter a label to submit.")
+elif interp_input == "Please":
+    st.write("Please select an interpretability score to submit.")
+elif complexity_input == "Please":
+    st.write("Please select a semantic complexity score to submit.")
 else:
     st.button('Submit', on_click=submit)
     
