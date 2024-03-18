@@ -68,7 +68,11 @@ with st.spinner("Loading component annotator..."):
 ########################
 
 # Reminder
-st.info("Reminder: You can summarize the examples below by either content or grammatical structure.", icon="📝")
+reminder_message = '''
+Reminder: You can summarize the examples below by either content (for example, words about sports) 
+or grammatical features (for example, singular nouns, or the last token in a sentence).
+'''
+st.info(reminder_message, icon="📝")
 
 # Welcome message
 message = '''
