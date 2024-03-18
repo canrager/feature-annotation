@@ -55,9 +55,9 @@ with st.spinner("Loading component annotator..."):
             st.session_state['n_components'] = n_components
             
     # Close session if all components are annotated
-    st.session_state["paid_mode"] = st.session_state.get("paid_mode", True)
-    if st.session_state["paid_mode"] and st.session_state["total_annotations"] >= TOTAL_ANNOTATIONS_PAID:
-        st.switch_page("pages/endpage.py")
+    # st.session_state["paid_mode"] = st.session_state.get("paid_mode", True)
+    # if st.session_state["paid_mode"] and st.session_state["total_annotations"] >= TOTAL_ANNOTATIONS_PAID:
+    #     st.switch_page("pages/endpage.py")
 
 
 # Manually set sample_id
