@@ -54,6 +54,7 @@ with st.spinner("Loading component annotator..."):
             n_components = len(st.session_state['data'])
             st.session_state['n_components'] = n_components
             
+    st.session_state["paid_mode"] = st.session_state.get("paid_mode", False)     
     # Close session if all components are annotated
     # st.session_state["paid_mode"] = st.session_state.get("paid_mode", True)
     # if st.session_state["paid_mode"] and st.session_state["total_annotations"] >= TOTAL_ANNOTATIONS_PAID:
@@ -67,13 +68,6 @@ with st.spinner("Loading component annotator..."):
 # Main page
 ########################
 
-# Reminder
-reminder_message = '''
-Reminder: You can summarize the examples below by either content (for example, words about sports) 
-or grammatical features (for example, singular nouns, or the last token in a sentence).
-'''
-st.info(reminder_message, icon="📝")
-
 # Welcome message
 message = '''
 Welcome to the model component annotator!
@@ -85,6 +79,12 @@ Watch the walkthrough video for this annotation tool here: https://youtu.be/RioP
 if st.session_state["progress_cnt"] == 0:
     st.info(message, icon="👋")
 
+# Reminder
+reminder_message = '''
+Reminder: You can summarize the examples below by either content (for example, words about sports) 
+or grammatical features (for example, singular nouns, or the last token in a sentence).
+'''
+st.info(reminder_message, icon="📝")
 
 # Display data
 data = st.session_state['data'][str(st.session_state["sample_id"])]
