@@ -45,7 +45,7 @@ with st.spinner("Loading component annotator..."):
         print(list(cnt_dict.keys()))
         least_annotated = min(cnt_dict.keys())
         sample_id = np.random.choice(cnt_dict[least_annotated])
-        st.session_state['sample_id'] = sample_id
+        st.session_state['sample_id'] = int(sample_id)
 
     # Load data
     if 'n_components' not in st.session_state:
@@ -60,12 +60,15 @@ with st.spinner("Loading component annotator..."):
         st.switch_page("pages/endpage.py")
 
 
-
-
+# Manually set sample_id
+# st.session_state["sample_id"] = st.number_input('Sample ID', min_value=0, max_value=st.session_state['n_components']-1)
 
 ########################
 # Main page
 ########################
+
+# Reminder
+st.info("Reminder: You can summarize the examples below by either content or grammatical structure.", icon="📝")
 
 # Welcome message
 message = '''
